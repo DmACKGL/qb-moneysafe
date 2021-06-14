@@ -4,7 +4,7 @@ TriggerEvent('QBCore:GetObject', function(obj) QBCore = obj end)
 -- Code
 
 Citizen.CreateThread(function()
-    QBCore.Functions.ExecuteSql(false, "SELECT * FROM `moneysafes`", function(safes)
+    QBCore.Functions.ExecuteSql(false, nil, "SELECT * FROM `moneysafes`", function(safes)
         if safes[1] ~= nil then
             for _, d in pairs(safes) do
                 for safe, s in pairs(Config.Safes) do
@@ -86,13 +86,13 @@ AddEventHandler('qb-moneysafe:server:DepositMoney', function(safe, amount, sende
     else
         AddTransaction(safe, "deposit", amount, {}, true)
     end
-    QBCore.Functions.ExecuteSql(false, "SELECT * FROM `moneysafes` WHERE `safe` = '"..safe.."'", function(result)
+    QBCore.Functions.ExecuteSql(false, {['a'] = safe}, "SELECT * FROM `moneysafes` WHERE `safe` = @a", function(result)
         if result[1] ~= nil then
             Config.Safes[safe].money = (Config.Safes[safe].money + amount)
-            QBCore.Functions.ExecuteSql(false, "UPDATE `moneysafes` SET money = '"..Config.Safes[safe].money.."', transactions = '"..json.encode(Config.Safes[safe].transactions).."' WHERE `safe` = '"..safe.."'")
+            QBCore.Functions.ExecuteSql(false, {['a'] = Config.Safes[safe].money, ['b']= json.encode(Config.Safes[safe].transactions), ['c'] = safe}, "UPDATE `moneysafes` SET money = @a, transactions = @b WHERE `safe` = @c")
         else
             Config.Safes[safe].money = amount
-            QBCore.Functions.ExecuteSql(false, "INSERT INTO `moneysafes` (`safe`, `money`, `transactions`) VALUES ('"..safe.."', '"..Config.Safes[safe].money.."', '"..json.encode(Config.Safes[safe].transactions).."')")
+            QBCore.Functions.ExecuteSql(false, {['a'] = safe, ['b'] = Config.Safes[safe].money, ['c']=json.encode(Config.Safes[safe].transactions)}, "INSERT INTO `moneysafes` (`safe`, `money`, `transactions`) VALUES (@a, @b, @c)")
         end
         TriggerClientEvent('qb-moneysafe:client:UpdateSafe', -1, Config.Safes[safe], safe)
         TriggerClientEvent('QBCore:Notify', src, "You have $"..amount..",- put in the safe", "success")
@@ -107,7 +107,7 @@ AddEventHandler('qb-moneysafe:server:WithdrawMoney', function(safe, amount)
     if (Config.Safes[safe].money - amount) >= 0 then 
         AddTransaction(safe, "withdraw", amount, Player, false)
         Config.Safes[safe].money = (Config.Safes[safe].money - amount)
-        QBCore.Functions.ExecuteSql(false, "UPDATE `moneysafes` SET money = '"..Config.Safes[safe].money.."', transactions = '"..json.encode(Config.Safes[safe].transactions).."' WHERE `safe` = '"..safe.."'")
+        QBCore.Functions.ExecuteSql(false, {['a'] = Config.Safes[safe].money, ['b'] = json.encode(Config.Safes[safe].transactions), ['c'] = safe}, "UPDATE `moneysafes` SET money = @a, transactions = @b WHERE `safe` = @c")
         TriggerClientEvent('qb-moneysafe:client:UpdateSafe', -1, Config.Safes[safe], safe)
         TriggerClientEvent('QBCore:Notify', src, "You have $"..amount..",- taken out of safe!", "success")
         Player.Functions.AddMoney('cash', amount)
