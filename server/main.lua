@@ -81,13 +81,21 @@ AddEventHandler('qb-moneysafe:server:DepositMoney', function(safe, amount, sende
     else
         AddTransaction(safe, "deposit", amount, {}, true)
     end
-    exports.ghmattimysql:execute("SELECT * FROM `moneysafes` WHERE `safe` = '"..safe.."'", function(result)
+    exports.ghmattimysql:execute("SELECT * FROM `moneysafes` WHERE `safe` = @safe", {['@safe']=safe}, function(result)
         if result[1] ~= nil then
             Config.Safes[safe].money = (Config.Safes[safe].money + amount)
-            exports.ghmattimysql:execute("UPDATE `moneysafes` SET money = '"..Config.Safes[safe].money.."', transactions = '"..json.encode(Config.Safes[safe].transactions).."' WHERE `safe` = '"..safe.."'")
+            exports.ghmattimysql:execute("UPDATE `moneysafes` SET money = @money, transactions = @transactions WHERE `safe` = @safe", {
+                ['@money'] = Config.Safes[safe].money,
+                ['@transactions'] = json.encode(Config.Safes[safe].transactions),
+                ['@safe'] = safe
+            })
         else
             Config.Safes[safe].money = amount
-            exports.ghmattimysql:execute("INSERT INTO `moneysafes` (`safe`, `money`, `transactions`) VALUES ('"..safe.."', '"..Config.Safes[safe].money.."', '"..json.encode(Config.Safes[safe].transactions).."')")
+            exports.ghmattimysql:execute("INSERT INTO `moneysafes` (`safe`, `money`, `transactions`) VALUES (@safe, @money, @transactions)", {
+                ['@safe'] = safe,
+                ['@money'] = Config.Safes[safe].money,
+                ['@transactions'] = json.encode(Config.Safes[safe].transactions)
+            })
         end
         TriggerClientEvent('qb-moneysafe:client:UpdateSafe', -1, Config.Safes[safe], safe)
         TriggerClientEvent('QBCore:Notify', src, "You have $"..amount..",- put in the safe", "success")
@@ -102,7 +110,11 @@ AddEventHandler('qb-moneysafe:server:WithdrawMoney', function(safe, amount)
     if (Config.Safes[safe].money - amount) >= 0 then 
         AddTransaction(safe, "withdraw", amount, Player, false)
         Config.Safes[safe].money = (Config.Safes[safe].money - amount)
-        exports.ghmattimysql:execute("UPDATE `moneysafes` SET money = '"..Config.Safes[safe].money.."', transactions = '"..json.encode(Config.Safes[safe].transactions).."' WHERE `safe` = '"..safe.."'")
+        exports.ghmattimysql:execute("UPDATE `moneysafes` SET money = @money, transactions = @transactions WHERE `safe` = @safe", {
+            ['@money'] = Config.Safes[safe].money,
+            ['@transactions'] = json.encode(Config.Safes[safe].transactions),
+            ['@safe'] = safe
+        })
         TriggerClientEvent('qb-moneysafe:client:UpdateSafe', -1, Config.Safes[safe], safe)
         TriggerClientEvent('QBCore:Notify', src, "You have $"..amount..",- taken out of safe!", "success")
         Player.Functions.AddMoney('cash', amount)
